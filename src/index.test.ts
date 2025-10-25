@@ -493,6 +493,165 @@ it("Works when adding new tasks halfway through", async () => {
   ]);
 });
 
+it("`wrap` works", async () => {
+  const semaphore = createSemaphore(3);
+
+  const taskManager = createTaskManager();
+
+  const taskA = taskManager.createTask("A");
+  const taskB = taskManager.createTask("B");
+  const taskC = taskManager.createTask("C");
+  const taskD = taskManager.createTask("D");
+  const taskE = taskManager.createTask("E");
+  const taskF = taskManager.createTask("F");
+  const taskG = taskManager.createTask("G");
+
+  const wrappedA = semaphore.wrap(taskA);
+  const wrappedB = semaphore.wrap(taskB);
+  const wrappedC = semaphore.wrap(taskC);
+  const wrappedD = semaphore.wrap(taskD);
+  const wrappedE = semaphore.wrap(taskE);
+  const wrappedF = semaphore.wrap(taskF);
+  const wrappedG = semaphore.wrap(taskG);
+
+  const promiseA = wrappedA().catch(() => {
+    // No Op
+  });
+  const promiseB = wrappedB().catch(() => {
+    // No Op
+  });
+  const promiseC = wrappedC().catch(() => {
+    // No Op
+  });
+  const promiseD = wrappedD().catch(() => {
+    // No Op
+  });
+
+  expect(taskManager.getTaskStatus("A")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("B")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("C")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("D")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("E")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("F")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("G")).toBe("UNSTARTED");
+
+  await taskManager.fulfillTask("A");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("C")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("D")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("E")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("F")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("G")).toBe("UNSTARTED");
+
+  await taskManager.fulfillTask("B");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("D")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("E")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("F")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("G")).toBe("UNSTARTED");
+
+  await taskManager.rejectTask("C");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("D")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("E")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("F")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("G")).toBe("UNSTARTED");
+
+  await taskManager.rejectTask("D");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("D")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("E")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("F")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("G")).toBe("UNSTARTED");
+
+  const promiseE = wrappedE().catch(() => {
+    // No Op
+  });
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("D")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("E")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("F")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("G")).toBe("UNSTARTED");
+
+  const promiseF = wrappedF().catch(() => {
+    // No op
+  });
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("D")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("E")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("F")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("G")).toBe("UNSTARTED");
+
+  await taskManager.fulfillTask("E");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("D")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("E")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("F")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("G")).toBe("UNSTARTED");
+
+  const promiseG = wrappedG().catch(() => {
+    // No Op
+  });
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("D")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("E")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("F")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("G")).toBe("RUNNING");
+
+  await taskManager.fulfillTask("F");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("D")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("E")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("F")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("G")).toBe("RUNNING");
+
+  await taskManager.fulfillTask("G");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("D")).toBe("REJECTED");
+  expect(taskManager.getTaskStatus("E")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("F")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("G")).toBe("FULFILLED");
+
+  await Promise.all([
+    promiseA,
+    promiseB,
+    promiseC,
+    promiseD,
+    promiseE,
+    promiseF,
+    promiseG,
+  ]);
+});
+
 type TaskRecord = {
   id: string;
   status: "UNSTARTED" | "RUNNING" | "REJECTED" | "FULFILLED";
