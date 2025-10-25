@@ -1,7 +1,7 @@
 {
-  "name": "simple-semaphore",
+  "name": "easy-semaphore",
   "version": "1.0.0",
-  "description": "",
+  "description": "Simple and practical semaphore implementation that works both on the browser and the server.",
   "main": "dist/index.js",
   "files": [
     "dist"
@@ -12,11 +12,11 @@
     "build": "tsc"
   },
   "keywords": [],
-   "author": {
+  "author": {
     "name": "Henrique Inonhe",
     "email": "henriqueinonhe@gmail.com"
   },
-   "license": "MIT",
+  "license": "MIT",
   "packageManager": "pnpm@10.6.3",
   "devDependencies": {
     "prettier": "3.6.2",

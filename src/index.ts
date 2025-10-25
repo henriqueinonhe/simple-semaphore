@@ -1,3 +1,5 @@
+export type Semaphore = ReturnType<typeof createSemaphore>;
+
 export const createSemaphore = (maxPermits: number) => {
   let permitsIssued = 0;
 
