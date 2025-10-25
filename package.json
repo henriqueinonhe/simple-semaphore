@@ -1,0 +1,35 @@
+{
+  "name": "simple-semaphore",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prepublishOnly": "pnpm run test && pnpm build",
+    "test": "vitest",
+    "build": "tsc"
+  },
+  "keywords": [],
+   "author": {
+    "name": "Henrique Inonhe",
+    "email": "henriqueinonhe@gmail.com"
+  },
+   "license": "MIT",
+  "packageManager": "pnpm@10.6.3",
+  "devDependencies": {
+    "prettier": "3.6.2",
+    "typescript": "5.9.3",
+    "vitest": "4.0.3"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20.x"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
