@@ -11,7 +11,7 @@
     "test": "vitest",
     "build": "tsc"
   },
-  "keywords": [],
+  "keywords": ["semaphore", "mutex", "limit concurrency"],
   "author": {
     "name": "Henrique Inonhe",
     "email": "henriqueinonhe@gmail.com"

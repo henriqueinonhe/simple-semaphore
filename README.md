@@ -69,16 +69,16 @@ semaphore.run(() => task2());
 
 ## API
 
-### `createSemaphore: (permits: number) => Semaphore`
+### `createSemaphore()`
 
 Creates a semaphore with a given number of `permits`, which determines how many concurrent tasks will be run at a given time.
 
 Keep in mind that each semaphore instance is **independent**, so a task that is run "within" a semaphore, is isolated and won't count towards the concurrency limit of **another** semaphore instance.
 
-### `semaphore.run: <T>(task: () => T) => Promise<T>`
+### `semaphore.run()`
 
 Runs a given task within a semaphore instance.
 
-### `semaphore.wrap: <Input, Output>(fn: (...args: Input) => Output) => (...args: Input) => Promise<Output>`
+### `semaphore.wrap()`
 
 Creates a decorated version of a given function that will be run within the context of a given semaphore instance.
