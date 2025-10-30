@@ -20,6 +20,10 @@
     "name": "Henrique Inonhe",
     "email": "henriqueinonhe@gmail.com"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/henriqueinonhe/easy-semaphore"
+  },
   "license": "MIT",
   "packageManager": "pnpm@10.6.3",
   "devDependencies": {
