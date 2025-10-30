@@ -1,6 +1,6 @@
 {
   "name": "easy-semaphore",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Simple and practical semaphore implementation that works both on the browser and the server.",
   "main": "dist/index.js",
   "files": [
