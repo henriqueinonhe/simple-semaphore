@@ -8,9 +8,11 @@ export const createSemaphore = (maxPermits: number) => {
   const run = async <T>(fn: () => T) => {
     if (permitsIssued === maxPermits) {
       await waitForTurn();
+      // Permit was transferred to us by the releasing task,
+      // so we must NOT increment here.
+    } else {
+      permitsIssued++;
     }
-
-    permitsIssued++;
 
     try {
       const result = fn();
@@ -21,9 +23,15 @@ export const createSemaphore = (maxPermits: number) => {
 
       return result;
     } finally {
-      permitsIssued--;
+      const nextResolver = queue.shift();
 
-      callNextInTurn();
+      if (nextResolver) {
+        // "Transfer" permit to the next waiter without releasing it,
+        // so a synchronous newcomer can't slip into the freed slot.
+        nextResolver();
+      } else {
+        permitsIssued--;
+      }
     }
   };
 
@@ -36,12 +44,6 @@ export const createSemaphore = (maxPermits: number) => {
     return new Promise<void>((resolve) => {
       queue.push(resolve);
     });
-  };
-
-  const callNextInTurn = () => {
-    const nextResolver = queue.shift();
-
-    nextResolver?.();
   };
 
   return {

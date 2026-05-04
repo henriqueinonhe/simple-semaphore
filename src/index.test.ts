@@ -652,6 +652,143 @@ it("`wrap` works", async () => {
   ]);
 });
 
+it("Doesn't let a new caller bypass a queued waiter when a permit is released", async () => {
+  const semaphore = createSemaphore(2);
+
+  const taskManager = createTaskManager();
+
+  const taskA = taskManager.createTask("A");
+  const taskB = taskManager.createTask("B");
+  const taskC = taskManager.createTask("C");
+  const taskD = taskManager.createTask("D");
+
+  const promiseA = taskA();
+
+  // Here's the race condition where
+  // the new task D runs right after
+  // promise A resolves, but before other enqueued stuff
+  semaphore.run(() => promiseA);
+  promiseA.then(() => semaphore.run(taskD));
+
+  semaphore.run(taskB);
+  semaphore.run(taskC);
+
+  expect(taskManager.getTaskStatus("A")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("B")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("C")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("D")).toBe("UNSTARTED");
+
+  const fulfillAPromise = taskManager.fulfillTask("A");
+  await promiseA;
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("C")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("D")).toBe("UNSTARTED");
+
+  await fulfillAPromise;
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("C")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("D")).toBe("UNSTARTED");
+
+  await taskManager.fulfillTask("C");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("C")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("D")).toBe("RUNNING");
+
+  await taskManager.fulfillTask("D");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("C")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("D")).toBe("FULFILLED");
+
+  await taskManager.fulfillTask("B");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("D")).toBe("FULFILLED");
+});
+
+it("Doesn't leak permits across queued task hand-offs", async () => {
+  const semaphore = createSemaphore(2);
+
+  const taskManager = createTaskManager();
+
+  const taskA = taskManager.createTask("A");
+  const taskB = taskManager.createTask("B");
+  const taskC = taskManager.createTask("C");
+  const taskD = taskManager.createTask("D");
+  const taskE = taskManager.createTask("E");
+
+  const promiseA = semaphore.run(taskA);
+  const promiseB = semaphore.run(taskB);
+  const promiseC = semaphore.run(taskC);
+  const promiseD = semaphore.run(taskD);
+
+  expect(taskManager.getTaskStatus("A")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("B")).toBe("RUNNING");
+  expect(taskManager.getTaskStatus("C")).toBe("UNSTARTED");
+  expect(taskManager.getTaskStatus("D")).toBe("UNSTARTED");
+
+  // Drain all four tasks. C and D enter the running set via the
+  // queued hand-off path (the one where the released permit is
+  // "transferred" to the next waiter rather than freed and reacquired).
+  await taskManager.fulfillTask("A");
+  await taskManager.fulfillTask("B");
+  await taskManager.fulfillTask("C");
+  await taskManager.fulfillTask("D");
+
+  expect(taskManager.getTaskStatus("A")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("B")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("C")).toBe("FULFILLED");
+  expect(taskManager.getTaskStatus("D")).toBe("FULFILLED");
+
+  // Nothing is in flight, so a fresh task must be able to start
+  // immediately. If the hand-off path leaks permits, the internal
+  // counter is still pinned at maxPermits and E will deadlock here.
+  const promiseE = semaphore.run(taskE);
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(taskManager.getTaskStatus("E")).toBe("RUNNING");
+
+  await taskManager.fulfillTask("E");
+
+  await Promise.all([promiseA, promiseB, promiseC, promiseD, promiseE]);
+});
+
+it("Resolves with the value returned by the task", async () => {
+  const semaphore = createSemaphore(2);
+
+  const syncResult = await semaphore.run(() => 42);
+  expect(syncResult).toBe(42);
+
+  const asyncResult = await semaphore.run(async () => "hello");
+  expect(asyncResult).toBe("hello");
+});
+
+it("Propagates errors thrown by the task", async () => {
+  const semaphore = createSemaphore(2);
+
+  await expect(
+    semaphore.run(() => {
+      throw new Error("boom");
+    }),
+  ).rejects.toThrow("boom");
+
+  await expect(
+    semaphore.run(async () => {
+      throw new Error("boom async");
+    }),
+  ).rejects.toThrow("boom async");
+});
+
 type TaskRecord = {
   id: string;
   status: "UNSTARTED" | "RUNNING" | "REJECTED" | "FULFILLED";
